@@ -308,7 +308,7 @@ export default function VitalManager({ selectedPatient, onBack }) {
               ) : chartUrl ? (
                 <div className="w-full bg-white p-3 border border-gray-100 rounded-2xl shadow-sm max-w-xl transition-all hover:shadow-md">
                   <img 
-                    src={chartUrl} 
+                    src={`${API_BASE}${chartUrl}?t=${new Date().getTime()}`}
                     alt="Clinical Metrics Analysis Representation" 
                     className="w-full h-auto rounded-xl object-contain max-h-[380px]" 
                   />

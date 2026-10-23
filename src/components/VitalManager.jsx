@@ -78,7 +78,7 @@ export default function VitalManager({ selectedPatient, onBack }) {
       });
       if (response.ok){
         const data = await response.json();
-        setAiInsight(data || null);
+        setAiInsight(data);
       }
     }catch(err){
       console.error("Failed to fetch AI analysis:", err);

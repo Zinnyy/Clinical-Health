@@ -14,6 +14,10 @@ export default function VitalManager({ selectedPatient, onBack }) {
   const [loadingChart, setLoadingChart] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  //AI Prediction and Analysis states
+  const [aiInsight, setAiInsight] = useState(null);
+  const [loadingAi, setLoadingAi] = useState(false);
+
   const API_BASE = "https://health-information.onrender.com"; 
 
   // 1. GET /api/VitalRecord/patient/{id} — Fetch history logs from database
@@ -62,10 +66,32 @@ export default function VitalManager({ selectedPatient, onBack }) {
     }
   };
 
+  // 3. GET /api/VitalRecord/analyze-vitals/{patientid} — Request AI analysis of vitals
+  const fetchAIAnalysis = async () => {
+    setLoadingAi(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/VitalRecord/analyze-vitals/${selectedPatient.id}`,  {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+        }
+      });
+      if (response.ok){
+        const data = await response.json();
+        setAiInsight(data || null);
+      }
+    }catch(err){
+      console.error("Failed to fetch AI analysis:", err);
+    }finally{
+      setLoadingAi(false);
+    }
+  }
+
   useEffect(() => {
     if (selectedPatient) {
       fetchVitalHistory();
       fetchChartReport();
+      fetchAIAnalysis();
     }
   }, [selectedPatient]);
 
@@ -102,6 +128,7 @@ export default function VitalManager({ selectedPatient, onBack }) {
         // Instantly reload database data and trigger the Python compiler to update charts
         fetchVitalHistory();
         fetchChartReport();
+        fetchAIAnalysis();
       } else {
         setErrorMessage("Biometric structure configuration rejected by server schema.");
       }
@@ -125,6 +152,7 @@ export default function VitalManager({ selectedPatient, onBack }) {
       if (response.ok) {
         fetchVitalHistory();
         fetchChartReport();
+        fetchAIAnalysis();
       }
     } catch (err) {
       setErrorMessage("Failed to submit entry removal pipeline request.");
@@ -158,6 +186,96 @@ export default function VitalManager({ selectedPatient, onBack }) {
           <i className="bi bi-exclamation-triangle-fill me-2"></i>{errorMessage}
         </div>
       )}
+
+ {/* Feature 2: Only attempt rendering if the patient has data points logged */}
+      {vitalsHistory.length > 0 && (
+        <>
+          {/* Feature 1: Pulse skeleton loaders when the Python model is processing */}
+        {loadingAi ? (
+            <div className="mb-6 p-6 rounded-3xl border-2 border-gray-200 bg-white grid grid-cols-1 md:grid-cols-3 gap-6 shadow-sm animate-pulse">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+                <div className="space-y-2 flex-1">
+                  <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                  <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                </div>
+              </div>
+              <div className="space-y-3 pt-2">
+                <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-full"></div>
+              </div>
+              <div className="flex items-center space-x-4 md:border-l md:border-gray-100 md:pl-6">
+                <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+                <div className="space-y-2 flex-1">
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-6 bg-gray-200 rounded-full w-24"></div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Render actual AI insights data when loaded */
+            aiInsight && (
+              <div className={`mb-6 p-6 rounded-3xl border-2 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-sm transition-all duration-300 ${
+                aiInsight.anomalyDetected 
+                  ? 'bg-rose-50 border-rose-200' 
+                  : 'bg-emerald-50 border-emerald-200'
+              }`}>
+                
+                {/* Card Module 1: Diagnostic Risk Classification */}
+                <div className="flex items-start space-x-4">
+                  <div className={`p-3 rounded-xl ${aiInsight.anomalyDetected ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                    <i className={`bi ${aiInsight.anomalyDetected ? 'bi-shield-fill-exclamation' : 'bi-shield-fill-check'} text-xl`}></i>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">ML Classification</span>
+                    <h4 className="text-lg font-bold text-gray-900 mt-0.5">
+                      {aiInsight.anomalyDetected ? "Biometric Anomaly Detected" : "Vitals Status Stable"}
+                    </h4>
+                    <p className="text-xs text-gray-400 mt-1 font-medium">Random Forest cluster analysis framework</p>
+                  </div>
+                </div>
+
+                {/* Card Module 2: Continuous Risk Scale Probability */}
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Risk Index Profile</span>
+                    <span className="text-xs font-bold text-gray-700">{(aiInsight.riskProbability * 100).toFixed(1)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-500 ${aiInsight.anomalyDetected ? 'bg-rose-500' : 'bg-emerald-500'}`} 
+                      style={{ width: `${aiInsight.riskProbability * 100}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1.5 font-medium">Statistical deviation margin evaluation</p>
+                </div>
+
+                {/* Card Module 3: Clinical Urgency Metric Triage */}
+                <div className="flex items-start space-x-4 md:border-l md:border-gray-200 md:pl-6">
+                  <div className="p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+                    <i className="bi bi-activity text-xl text-violet-600"></i>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Clinical Action Tier</span>
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mt-1 shadow-sm ${
+                      aiInsight.clinicalSeverity === 'Critical' ? 'bg-red-500 text-white' : 
+                      aiInsight.clinicalSeverity === 'Moderate Warning' ? 'bg-amber-400 text-gray-900' : 
+                      'bg-emerald-500 text-white'
+                    }`}>
+                      {aiInsight.clinicalSeverity}
+                    </span>
+                    <p className="text-[10px] text-gray-400 mt-1 font-mono uppercase tracking-wider">AI Guardrail Checklist Attached</p>
+                  </div>
+                </div>
+
+              </div>
+            )
+          )}
+        </>
+      )}
+
+
+
       {/* Main Workspace Split Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         

@@ -78,7 +78,11 @@ export default function VitalManager({ selectedPatient, onBack }) {
       });
       if (response.ok){
         const data = await response.json();
-        setAiInsight(data);
+        if(data && data.AiInsights){
+          setAiInsight(data.AiInsights);
+        }else if(data && data.aiInsights){
+          setAiInsight(data.aiInsights);
+        }
       }
     }catch(err){
       console.error("Failed to fetch AI analysis:", err);
@@ -216,20 +220,20 @@ export default function VitalManager({ selectedPatient, onBack }) {
             /* Render actual AI insights data when loaded */
             aiInsight && (
               <div className={`mb-6 p-6 rounded-3xl border-2 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-sm transition-all duration-300 ${
-                aiInsight.anomalyDetected 
+                aiInsight.status === 'Anomaly Alert'
                   ? 'bg-rose-50 border-rose-200' 
                   : 'bg-emerald-50 border-emerald-200'
               }`}>
                 
                 {/* Card Module 1: Diagnostic Risk Classification */}
                 <div className="flex items-start space-x-4">
-                  <div className={`p-3 rounded-xl ${aiInsight.anomalyDetected ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
-                    <i className={`bi ${aiInsight.anomalyDetected ? 'bi-shield-fill-exclamation' : 'bi-shield-fill-check'} text-xl`}></i>
+                  <div className={`p-3 rounded-xl ${aiInsight.status === 'Anomaly Alert' ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                    <i className={`bi ${aiInsight.status === 'Anomaly Alert' ? 'bi-shield-fill-exclamation' : 'bi-shield-fill-check'} text-xl`}></i>
                   </div>
                   <div>
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">ML Classification</span>
                     <h4 className="text-lg font-bold text-gray-900 mt-0.5">
-                      {aiInsight.anomalyDetected ? "Biometric Anomaly Detected" : "Vitals Status Stable"}
+                      {aiInsight.status === 'Anomaly Alert' ? "Biometric Anomaly Alert" : "Vitals Status Stable"}
                     </h4>
                     <p className="text-xs text-gray-400 mt-1 font-medium">Random Forest cluster analysis framework</p>
                   </div>
@@ -239,12 +243,12 @@ export default function VitalManager({ selectedPatient, onBack }) {
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Risk Index Profile</span>
-                    <span className="text-xs font-bold text-gray-700">{(aiInsight.riskProbability * 100).toFixed(1)}%</span>
+                    <span className="text-xs font-bold text-gray-700">{aiInsight.riskIndex}%</span>
                   </div>
                   <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-500 ${aiInsight.anomalyDetected ? 'bg-rose-500' : 'bg-emerald-500'}`} 
-                      style={{ width: `${aiInsight.riskProbability * 100}%` }}
+                      className={`h-full transition-all duration-500 ${aiInsight.status === 'Anomaly Alert' ? 'bg-rose-500' : 'bg-emerald-500'}`} 
+                      style={{ width: `${aiInsight.riskIndex}%` }}
                     ></div>
                   </div>
                   <p className="text-xs text-gray-400 mt-1.5 font-medium">Statistical deviation margin evaluation</p>
@@ -258,11 +262,11 @@ export default function VitalManager({ selectedPatient, onBack }) {
                   <div>
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Clinical Action Tier</span>
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mt-1 shadow-sm ${
-                      aiInsight.clinicalSeverity === 'Critical' ? 'bg-red-500 text-white' : 
-                      aiInsight.clinicalSeverity === 'Moderate Warning' ? 'bg-amber-400 text-gray-900' : 
+                      aiInsight.actionTier === 'Critical' ? 'bg-red-500 text-white' : 
+                      aiInsight.actionTier === 'Moderate Warning' ? 'bg-amber-400 text-gray-900' : 
                       'bg-emerald-500 text-white'
                     }`}>
-                      {aiInsight.clinicalSeverity}
+                      {aiInsight.actionTier}
                     </span>
                     <p className="text-[10px] text-gray-400 mt-1 font-mono uppercase tracking-wider">AI Guardrail Checklist Attached</p>
                   </div>
